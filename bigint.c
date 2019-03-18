@@ -89,16 +89,14 @@ void add(bigint r, const bigint x, const bigint y)
 		carry = t == 0;
 		r->digits[i++] = t;
 	}
-	if (a->size < p->size)
-		if (carry)
-		{
-			r->digits[a->size] = 1;
-			r->size = a->size + 1;
-			if (cmp(r, p) >= 0)
-				sub_n(r, r, p);
-		}
-		else
-			r->size = a->size;
+	r->size = a->size;
+	if (a->size < p->size && carry)
+	{
+		r->digits[a->size] = 1;
+		r->size++;
+		if (cmp(r, p) >= 0)
+			sub_n(r, r, p);
+	}
 	else if (carry || cmp(r, p) >= 0)
 		sub_n(r, r, p);
 }

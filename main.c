@@ -10,6 +10,7 @@ void test()
 	init_str(s, "12a23131");
 	init(t);
 	add(t, r, r);
+	printf("%d\n", r->size);
 	printf("%s\n", get_str(t));
 }
 
