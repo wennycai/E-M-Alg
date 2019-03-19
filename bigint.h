@@ -17,6 +17,7 @@ char* get_str(const bigint);
 void add(bigint, const bigint, const bigint);
 void sub(bigint, const bigint, const bigint);
 void sub_n(bigint, const bigint, const bigint);
+void sub_p(bigint);
 //void mul(bigint, const bigint, const bigint);
 //void div(bigint, const bigint, const bigint);
 //void mod(bigint, const bigint, const bigint);
@@ -24,7 +25,6 @@ void sub_n(bigint, const bigint, const bigint);
 //void pow_(bigint, const bigint, unsigned long);
 //int sgn(const bigint);
 int cmp(const bigint, const bigint);
-void sub_p(bigint);
 //
 //
 //void add_fp(bigint, const bigint, const bigint);

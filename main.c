@@ -9,8 +9,7 @@ void test()
 	init_str(r, "aaa000abc6876857658de0");
 	init_str(s, "12a23131");
 	init(t);
-	add(t, r, r);
-	printf("%d\n", r->size);
+	add(t, r, s);
 	printf("%s\n", get_str(t));
 }
 

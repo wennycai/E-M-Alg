@@ -66,7 +66,7 @@ char* get_str(const bigint x)
 	char hex[16] = "0123456789abcdef";
 	for (int i = x->size - 1, k = 0; i >= 0; i--)
 		for (int j = 60; j >= 0; j -= 4)
-			r[k++] = hex[(x->digits[i] & (int64)15 << j) >> j];
+			r[k++] = hex[x->digits[i] >> j & 15];
 	for (; *r == '0'; r++);
 	return r;
 }
@@ -80,25 +80,28 @@ void add(bigint r, const bigint x, const bigint y)
 	while (i < b->size)
 	{
 		t = a->digits[i] + b->digits[i] + carry;
-		carry = t <= a->digits[i] && t <= b->digits[i];
+		carry = carry ? t <= a->digits[i] : t < a->digits[i];
 		r->digits[i++] = t;
 	}
 	while (i < a->size)
 	{
 		t = a->digits[i] + carry;
-		carry = t == 0;
+		carry = carry && !t;
 		r->digits[i++] = t;
 	}
 	r->size = a->size;
-	if (a->size < p->size && carry)
+	if (a->size < p->size)
 	{
-		r->digits[a->size] = 1;
-		r->size++;
-		if (cmp(r, p) >= 0)
-			sub_n(r, r, p);
+		if (carry)
+		{
+			r->digits[a->size] = 1;
+			r->size += 1;
+			if (cmp(r, p) >= 0)
+				sub_p(r);
+		}
 	}
 	else if (carry || cmp(r, p) >= 0)
-		sub_n(r, r, p);
+		sub_p(r);
 }
 
 void sub(bigint r, const bigint x, const bigint y)
@@ -114,27 +117,34 @@ void sub(bigint r, const bigint x, const bigint y)
 
 void sub_n(bigint r, const bigint x, const bigint y)
 {
-	int borrow = 0;
+	int borrow = 0, i = 0;
 	int64 t;
-	for (int i = 0; i < x->size; i++)
+	while (i < y->size)
 	{
 		t = x->digits[i] - y->digits[i] - borrow;
-		borrow = x->digits[i] <= t && x->digits[i] <= y->digits[i];
-		if (r->digits[i] = t)
-			r->size = i + 1;
+		borrow = borrow ? x->digits[i] <= t : x->digits[i] < t;
+		if (r->digits[i++] = t)
+			r->size = i;
+	}
+	while (i < x->size)
+	{
+		t = x->digits[i] - borrow;
+		borrow = borrow && !x->digits[i];
+		if (r->digits[i++] = t)
+			r->size = i;
 	}
 }
 
 void sub_p(bigint r)
 {
-	int borrow = 0;
+	int borrow = 0, i = 0;
 	int64 t;
-	for (int i = 0; i < p->size; i++)
+	while (i < p->size)
 	{
 		t = r->digits[i] - p->digits[i] - borrow;
-		borrow = r->digits[i] <= t && r->digits[i] <= p->digits[i];
-		if (r->digits[i] = t)
-			r->size = i + 1;
+		borrow = borrow ? r->digits[i] <= t : r->digits[i] < t;
+		if (r->digits[i++] = t)
+			r->size = i ;
 	}
 }
 
