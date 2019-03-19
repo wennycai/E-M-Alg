@@ -54,6 +54,12 @@ void set(bigint r, const bigint x)
 	r->size = x->size;
 }
 
+void set_int(bigint r, int64 x)
+{
+	r->size = 1;
+	r->digits[0] = x;
+}
+
 void clear(bigint r)
 {
 	r->size = 0;
@@ -150,8 +156,33 @@ void sub_p(bigint r)
 
 void mul(bigint r, const bigint x, const bigint y)
 {
-	
+	int64 t;
+
+	set_int(r, 0);
+	for (int i = 0; i < x->size; i++)
+		for (t = x->digits[i]; t; add(y, y, y))
+		{
+			if (t & 1)
+				add(r, r, y);
+			t >>= 1;
+		}
 }
+
+void square(bigint r)
+{
+
+}
+
+//void shift_left(bigint r, bigint x, int16 b)
+//{
+//	int64 t = 0;
+//	for (int i = 0; i < x->size; i++)
+//	{
+//		r->digits[i] = (x->digits[i] << b) + t;
+//		t = x->digits[i] >> 64 - b;
+//	}
+//	r->size = x->size + t;
+//}
 
 //void div(bigint q, const bigint n, const bigint d)
 //{
