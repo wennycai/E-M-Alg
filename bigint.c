@@ -5,7 +5,7 @@
 void init(bigint r)
 {
 	r->size = 1;
-	r->digits = (int64*)malloc(8 * p->size);
+	r->digits = (int64*)malloc(BYTES * p->size);
 }
 
 int init_p(const char* str)
@@ -13,10 +13,10 @@ int init_p(const char* str)
 	int count = 0, i = 0, j = 0;
 	while (*str)
 		count++, str++;
-	p->size = (count >> 4) + 1;
-	p->digits = (int64*)malloc(8 * p->size);
+	p->size = (count >> BITS_OF_HEX_PER_UNIT) + 1;
+	p->digits = (int64*)malloc(BYTES * p->size);
 	for (int k = 0; k < count; i++)
-		for (j = 0; j < 16 && k < count; k++)
+		for (j = 0; j < HEX_PER_UNIT && k < count; k++)
 			if (*(--str) <= '9' && *str >= '0')
 				p->digits[i] += (int64)(*str - '0') << (j++ << 2);
 			else if (*str <= 'F' && *str >= 'A')
@@ -33,9 +33,9 @@ int init_str(bigint r, const char* str)
 	int count = 0, i = 0, j = 0;
 	while (*str)
 		count++, str++;
-	r->digits = (int64*)malloc(8 * p->size);
+	r->digits = (int64*)malloc(BYTES * p->size);
 	for (int k = 0; k < count; i++)
-		for (j = 0; j < 16 && k < count; k++)
+		for (j = 0; j < HEX_PER_UNIT && k < count; k++)
 			if (*(--str) <= '9' && *str >= '0')
 				r->digits[i] += (int64)(*str - '0') << (j++ << 2);
 			else if (*str <= 'F' && *str >= 'A')
@@ -47,7 +47,15 @@ int init_str(bigint r, const char* str)
 	return (r->size = i);
 }
 
-void set(bigint r, const bigint x)
+void init_copy(bigint r, const bigint x)
+{
+	r->digits = (int64*)malloc(BYTES * p->size);
+	for (int i = 0; i < x->size; i++)
+		r->digits[i] = x->digits[i];
+	r->size = x->size;
+}
+
+void copy(bigint r, const bigint x)
 {
 	for (int i = 0; i < x->size; i++)
 		r->digits[i] = x->digits[i];
@@ -68,10 +76,10 @@ void clear(bigint r)
 
 char* get_str(const bigint x)
 {
-	char* r = (char*)calloc((x->size << 4) + 1, 1);
+	char* r = (char*)calloc((x->size << BITS_OF_HEX_PER_UNIT) + 1, 1);
 	char hex[16] = "0123456789abcdef";
 	for (int i = x->size - 1, k = 0; i >= 0; i--)
-		for (int j = 60; j >= 0; j -= 4)
+		for (int j = BITS_SUB_4; j >= 0; j -= 4)
 			r[k++] = hex[x->digits[i] >> j & 15];
 	for (; *r == '0'; r++);
 	return r;
@@ -156,59 +164,104 @@ void sub_p(bigint r)
 
 void mul(bigint r, const bigint x, const bigint y)
 {
+	int i = 0, j = 0;
 	int64 t;
-
-	set_int(r, 0);
-	for (int i = 0; i < x->size; i++)
-		for (t = x->digits[i]; t; add(y, y, y))
+	bigint a, b;
+	init_copy(a, x);
+	init_copy(b, y);
+	for (set_int(r, 0); i < a->size - 1; i++)
+		for (t = a->digits[i], j = 0; j < BITS; j++)
 		{
 			if (t & 1)
-				add(r, r, y);
+				add(r, r, b);
 			t >>= 1;
+			double_(b, b);
 		}
+	if ((t = a->digits[i]) & 1)
+		add(r, r, b);
+	while (t >>= 1)
+	{
+		double_(b, b);
+		if (t & 1)
+			add(r, r, b);
+	}
+	clear(a);
+	clear(b);
 }
 
-void square(bigint r)
+void double_(bigint r, const bigint x)
+{
+	int64 s = 0, t = 0;
+	for (int i = 0; i < x->size; i++)
+	{
+		t = x->digits[i];
+		r->digits[i] = (t << 1) + s;
+		s = t >> BITS_SUB_1;
+	}
+	r->size = x->size;
+	if (x->size < p->size)
+	{
+		if (s)
+		{
+			r->digits[x->size] = 1;
+			r->size += 1;
+			if (cmp(r, p) >= 0)
+				sub_p(r);
+		}
+	}
+	else if (s || cmp(r, p) >= 0)
+		sub_p(r);
+}
+
+void square(bigint r, const bigint x)
 {
 
 }
 
-//void shift_left(bigint r, bigint x, int16 b)
+//void shift_left(bigint r, const bigint x, int16 b)
 //{
 //	int64 t = 0;
+//	int16 d = b >> 6;
+//	b = b & 63;
 //	for (int i = 0; i < x->size; i++)
 //	{
 //		r->digits[i] = (x->digits[i] << b) + t;
 //		t = x->digits[i] >> 64 - b;
 //	}
-//	r->size = x->size + t;
+//	r->size = x->size + (x->size < p->size && (r->digits[x->size] = t));
 //}
 
-//void div(bigint q, const bigint n, const bigint d)
+//void shift_right(bigint r, const bigint x, int16 b)
 //{
-//	mpz_fdiv_q(q, n, d);
+//	int64 t = 0;
+//	int16 d = b >> 6;
+//	b = b & 63;
+//	for (int i = x->size - 1 - d; i >= 0; i--)
+//	{
+//		r->digits[i] = (x->digits[i + d] >> b) + t;
+//		t = x->digits[i + d] << 64 - b;
+//	}
+//	r->size = x->size - d - (r->digits[x->size - d - 1] == 0);
 //}
-//
-//void mod(bigint r, const bigint n, const bigint d)
-//{
-//	mpz_mod(r, n, d);
-//}
-//
-//void div_qr(bigint q, bigint r, const bigint n, const bigint d)
-//{
-//	mpz_fdiv_qr(q, r, n, d);
-//}
-//
-//void pow_(bigint r, const bigint b, unsigned long e)
-//{
-//	mpz_pow_ui(r, b, e);
-//}
-//
-//int sgn(const bigint x)
-//{
-//	return mpz_sgn(x);
-//}
-//
+
+void pow(bigint r, const bigint x, const bigint y)
+{
+	int64 t;
+	bigint a, b;
+	init_copy(a, x);
+	init_copy(b, y);
+	set_int(r, 1);
+	for (int i = 0; i < a->size; i++)
+		for (t = a->digits[i]; t; mul(b, b, b))
+		{
+			if (t & 1)
+				mul(r, r, b);
+			t >>= 1;
+		}
+	clear(a);
+	clear(b);
+}
+
 int cmp(const bigint x, const bigint y)
 {
 	if (x->size > y->size)
@@ -222,32 +275,3 @@ int cmp(const bigint x, const bigint y)
 			return -1;
 	return 0;
 }
-
-//
-//void add_fp(bigint r, const bigint x, const bigint y)
-//{
-//	mpz_add(r, x, y);
-//	mpz_mod(r, r, p);
-//}
-//
-//void sub_fp(bigint r, const bigint x, const bigint y)
-//{
-//	mpz_sub(r, x, y);
-//	mpz_mod(r, x, p);
-//}
-//
-//void mul_fp(bigint r, const bigint x, const bigint y)
-//{
-//	mpz_mul(r, x, y);
-//	mpz_mod(r, r, p);
-//}
-//
-//void inv_fp(bigint r, bigint x)
-//{
-//	mpz_invert(r, x, p);
-//}
-//
-//void pow_fp(bigint r, const bigint b, const bigint e)
-//{
-//	mpz_powm(r, b, e, p);
-//}
