@@ -1,28 +1,21 @@
 #include <stdio.h>
 #include "bigint.h"
-
-struct timeval 
-{
-	long tv_sec; 
-	long tv_usec; 
-};
+#include "rdtsc.h"
 
 void test()
 {
-	init_p("aaa000abcde43243254346abcde1123123abc123424bcdef1212412419980874091ab");
+	init_p("aaa000abcde432431bbbcccdddeeefff");
+	r_size = p->size;
 	bigint r, s, t;
-	init_str(r, "aaa000abcde43243254346abcde1123123abc123424bcdef1212412419980874091a");
+	init_str(r, "aaa000abcde432431bbbcccddd");
 	init_str(s, "12a2313179779878");
 	init(t);
-	struct timeval t0, t1;
-	long timeuse;
-	gettimeofday(&t0, NULL);
-	for (int i = 0; i < 1; i++)
-		mul(t, r, r);//7,15
-	gettimeofday(&t1, NULL);
+	int64 t0, t1;
+	t0 = rdtsc();
+	mul(t, s, r);
+	t1 = rdtsc();
 	printf("%s\n", get_str(t));
-	timeuse = t1.tv_sec - t0.tv_sec + (t1.tv_usec - t0.tv_usec);
-	printf("Time: %lu\n", timeuse);
+	printf("Time: %llu\n", t1 - t0);
 }
 
 int main()

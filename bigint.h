@@ -17,13 +17,19 @@ typedef unsigned int int64;
 #endif
 
 typedef unsigned short int16;
+typedef unsigned int int32;
 typedef struct
 {
 	int16 size;
 	int64* digits;
 }*bigint_ptr, bigint[1];
 typedef bigint* element;
+int16 r_size;
+int64 p_inv_mod_b;
 bigint p;
+
+static const int16 one_16 = ~0;
+static const int32 one_32 = ~0;
 
 void init(bigint);
 int init_p(const char*);
@@ -37,7 +43,7 @@ void add(bigint, const bigint, const bigint);
 void sub(bigint, const bigint, const bigint);
 void sub_n(bigint, const bigint, const bigint);
 void sub_p(bigint);
-void mul(bigint, const bigint, const bigint);
+void mul(bigint, const bigint, const bigint);    //short one first
 void double_(bigint, const bigint);
 void square(bigint, const bigint);
 //void shift_left(bigint, const bigint, int16);
@@ -45,3 +51,8 @@ void square(bigint, const bigint);
 //void mod(bigint, const bigint, const bigint);
 void pow(bigint, const bigint, const bigint);
 int cmp(const bigint, const bigint);
+
+void redc_0(bigint);
+void redc(bigint, const bigint, const bigint);
+int64* mul_int64(int64, int64);
+

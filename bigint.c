@@ -2,6 +2,18 @@
 #include<stdio.h>
 #include "bigint.h"
 
+#define ADD_MUL(x, y) prod = mul_int64(x, y);\
+s[j] += prod[0];	\
+b = s[j] < prod[0];\
+carry[0] += prod[1] + b;\
+carry[1] += b ? carry[0] <= prod[1] : carry[0] < prod[1]
+
+#define ADD_MUL_0(x, y) prod = mul_int64(x, y);\
+s[0] += prod[0];	\
+b = s[0] < prod[0];\
+carry[0] += prod[1] + b;\
+carry[1] += b ? carry[0] <= prod[1] : carry[0] < prod[1]
+
 void init(bigint r)
 {
 	r->size = 1;
@@ -13,8 +25,9 @@ int init_p(const char* str)
 	int count = 0, i = 0, j = 0;
 	while (*str)
 		count++, str++;
-	p->size = (count >> BITS_OF_HEX_PER_UNIT) + 1;
+	p->size = (count >> BITS_OF_HEX_PER_UNIT) + count % HEX_PER_UNIT;
 	p->digits = (int64*)malloc(BYTES * p->size);
+	p_inv_mod_b = 937367889255526401;
 	for (int k = 0; k < count; i++)
 		for (j = 0; j < HEX_PER_UNIT && k < count; k++)
 			if (*(--str) <= '9' && *str >= '0')
@@ -44,6 +57,7 @@ int init_str(bigint r, const char* str)
 				r->digits[i] += (int64)(*str - 'a' + 10) << (j++ << 2);
 			else
 				return 0;
+	printf("%d\n", i);
 	return (r->size = i);
 }
 
@@ -100,7 +114,7 @@ void add(bigint r, const bigint x, const bigint y)
 	while (i < a->size)
 	{
 		t = a->digits[i] + carry;
-		carry = carry && !t;
+		carry = t < carry;
 		r->digits[i++] = t;
 	}
 	r->size = a->size;
@@ -143,7 +157,7 @@ void sub_n(bigint r, const bigint x, const bigint y)
 	while (i < x->size)
 	{
 		t = x->digits[i] - borrow;
-		borrow = borrow && !x->digits[i];
+		borrow = borrow > x->digits[i];
 		if (r->digits[i++] = t)
 			r->size = i;
 	}
@@ -246,18 +260,27 @@ void square(bigint r, const bigint x)
 
 void pow(bigint r, const bigint x, const bigint y)
 {
+	int i = 0, j = 0;
 	int64 t;
 	bigint a, b;
 	init_copy(a, x);
 	init_copy(b, y);
-	set_int(r, 1);
-	for (int i = 0; i < a->size; i++)
-		for (t = a->digits[i]; t; mul(b, b, b))
+	for (set_int(r, 1); i < a->size - 1; i++)
+		for (t = a->digits[i], j = 0; j < BITS; j++)
 		{
 			if (t & 1)
-				mul(r, r, b);
+				mul (r, r, b);
 			t >>= 1;
+			mul(b, b, b);
 		}
+	if ((t = a->digits[i]) & 1)
+		mul(r, r, b);
+	while (t >>= 1)
+	{
+		mul(b, b, b);
+		if (t & 1)
+			mul(r, r, b);
+	}
 	clear(a);
 	clear(b);
 }
@@ -274,4 +297,109 @@ int cmp(const bigint x, const bigint y)
 		else if (x->digits[i] < y->digits[i])
 			return -1;
 	return 0;
+}
+
+void redc_0(bigint r)
+{
+	int64 m;
+	int64 carry[2];
+	bigint t;
+	//assert(t->size<r_size+p->size)
+	t->digits = (int64*)calloc((r_size + p->size) * BYTES, BYTES);
+	for (int i = 0; i < r->size; i++)
+		t->digits[i] = r->digits[i];
+	for (int i = 0; i < r_size; i++)
+	{
+		int b = 0, c = 0;
+		int j = 0;
+		int64* x;
+		carry[0] = 0, carry[1] = 0;
+		m = t->digits[i] * p_inv_mod_b;
+		for (j = 0; j < p->size; j++)
+		{
+			x = mul_int64(m, p->digits[j]);
+			x[0] += t->digits[i + j];
+			b = x[0] < t->digits[i + j];
+			x[1] += b;
+			c = x[1] < b;
+			x[0] += carry[0];
+			b = x[0] < carry[0];
+			x[1] += carry[1] + b;
+			c += b ? x[1] <= carry[1] : x[1] < carry[1];
+			t->digits[i + j] = x[0];
+			carry[0] = x[1];
+			carry[1] = c;
+		}
+		for (; j < r_size + p->size; j++)
+		{
+			t->digits[i + j] += carry[0];
+			carry[0] = carry[1] + (t->digits[i + j] < carry[0]);
+			carry[1] = carry[0] < carry[1];
+		}
+	}
+	t->digits += r_size;
+	t->size = p->size;
+	if (cmp(t, p) >= 0)
+		sub_p(t);
+	r->digits = t->digits;
+	int i = p->size;
+	for (; !r->digits[i-1]; i--);
+	r->size = i;
+}
+
+void redc(bigint r, const bigint x, const bigint y)
+{
+	int64 b, m, x_i;
+	int64 h = 0;
+	int64* prod, carry[2];
+	int64* s = r->digits;
+	for (int i = 0; i < p->size; i++)
+		s[i] = 0;
+	for (int i = 0, j = 0; i < p->size; i++)
+	{
+		m = (x->digits[i] * y->digits[0] + s[0]) * p_inv_mod_b;
+		x_i = x->digits[i];
+		carry[0] = 0, carry[1] = 0;
+		ADD_MUL_0(m, p->digits[0]);
+		ADD_MUL_0(x_i, y->digits[0]);
+		for (j = 0; j < p->size - 1; j++)
+		{
+			s[j] = s[j + 1] + carry[0];
+			b = s[j] < carry[0];
+			carry[0] = carry[1] + b;
+			carry[1] = carry[0] < b;
+			ADD_MUL(m, p->digits[j + 1]);
+			ADD_MUL(x_i, y->digits[j + 1]);
+		}
+		s[j] += carry[0];
+		h += carry[1] + (s[j] < carry[0]);
+	}
+	r->size = p->size;
+	if (h || cmp(r, p) >= 0)
+		sub_p(r);
+}
+
+int64* mul_int64(int64 x, int64 y)
+{
+	int64 r[2], x0, x1, y0, y1, r0, r1, r2;
+	x0 = x & one_32;
+	x1 = x >> 32;
+	y0 = y & one_32;
+	y1 = y >> 32;
+	r0 = x0 * y0;
+	r1 = x1 * y1;
+	//if (x0 > x1)
+	//	if (y0 > y1)
+	//		r2 = r0 + r1 - (x0 - x1) * (y0 - y1);
+	//	else
+	//		r2 = r0 + r1 + (x0 - x1) * (y1 - y0);
+	//else
+	//	if (y0 > y1)
+	//		r2 = r0 + r1 + (x1 - x0) * (y0 - y1);
+	//	else
+	//		r2 = r0 + r1 - (x1 - x0) * (y1 - y0);
+	r2 = x0 * y1 + x1 * y0;
+	r[0] = r0 + (r2 << 32);
+	r[1] = r1 + (r2 >> 32) + (r[0] < r0);
+	return r;
 }
