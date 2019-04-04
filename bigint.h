@@ -47,6 +47,7 @@ void square(bigint, const bigint);
 void power(bigint, const bigint, const bigint, int16);
 int cmp(const bigint, const bigint);
 
-int64* mul_int(int64, int64);
+void mul_int(int64*, int64, int64);
+void euclid(int64*, int64, int64);
 
 

@@ -2,13 +2,13 @@
 #include<stdio.h>
 #include "bigint.h"
 
-#define ADD_MUL(x, y, s) prod = mul_int(x, y);\
+#define ADD_MUL(x, y, s) mul_int(prod, x, y);\
 s += prod[0];	\
 k = s < prod[0];\
 carry[0] += prod[1] + k;\
 carry[1] += k ? carry[0] <= prod[1] : carry[0] < prod[1]
 
-#define ADD_MUL_0(x, y) prod = mul_int(x, y);\
+#define ADD_MUL_0(x, y) mul_int(prod, x, y);\
 s[0] += prod[0];	\
 k = s[0] < prod[0];\
 carry[0] = prod[1] + k;\
@@ -29,7 +29,7 @@ int init_p(const char* str)
 	int16 count, i, j, k;
 	for (count = 0; *str; str++)
 		count++;
-	p->size = (count >> BITS_OF_HEX_PER_UNIT) + count % HEX_PER_UNIT;
+	p->size = (count >> BITS_OF_HEX_PER_UNIT) + (count % HEX_PER_UNIT > 0);
 	p->digits = (int64*)calloc(BYTES * p->size, BYTES);
 	for (i = 0, k = 0; k < count; i++)
 		for (j = 0; j < HEX_PER_UNIT && k < count; k++)
@@ -41,7 +41,11 @@ int init_p(const char* str)
 				p->digits[i] += (int64)(*str - 'a' + 10) << (j++ << 2);
 			else
 				return 0;
-	p_inv_mod_b = 937367889255526401;
+	int64 s = p->digits[0];
+	int64 t = (-1 % s + 1) % s;
+	int64 r[3];
+	euclid(r, s, t);
+	p_inv_mod_b = (-t) / s * r[1] - r[0];
 	r_square->digits = (int64*)calloc(BYTES * i, BYTES);
 	r_square->digits[1] = 1;
 	r_square->size = 2;
@@ -89,21 +93,43 @@ void set_int(bigint r, int64 x)
 	r->digits[0] = x;
 }
 
-void clear(bigint r)
+int set_str(bigint r, const char* str)
 {
-	r->size = 0;
-	free(r->digits);
+	int16 count, i, j, k;
+	for (count = 0; *str; str++)
+		count++;
+	for (i = 0; i < r->size; r->digits[i++] = 0);
+	for (i = 0, k = 0; k < count; i++)
+		for (j = 0; j < HEX_PER_UNIT && k < count; k++)
+			if (*(--str) <= '9' && *str >= '0')
+				r->digits[i] += (int64)(*str - '0') << (j++ << 2);
+			else if (*str <= 'F' && *str >= 'A')
+				r->digits[i] += (int64)(*str - 'A' + 10) << (j++ << 2);
+			else if (*str <= 'f' && *str >= 'a')
+				r->digits[i] += (int64)(*str - 'a' + 10) << (j++ << 2);
+			else
+				return 0;
+	return (r->size = i);
 }
 
 char* get_str(const bigint x)
 {
+	int i = x->size - 1, j = BITS, k = 1;
 	char* r = (char*)calloc((x->size << BITS_OF_HEX_PER_UNIT) + 1, 1);
 	char hex[16] = "0123456789abcdef";
-	for (int i = x->size - 1, k = 0; i >= 0; i--)
-		for (int j = BITS_SUB_4; j >= 0; j -= 4)
+	while ((r[0] = hex[x->digits[i] >> (j -= 4) & 15]) == '0');
+	for (j -= 4; j >= 0; j -= 4)
+		r[k++] = hex[x->digits[i] >> j & 15];
+	for (i--; i >= 0; i--)
+		for (j = BITS_SUB_4; j >= 0; j -= 4)
 			r[k++] = hex[x->digits[i] >> j & 15];
-	for (; *r == '0'; r++);
 	return r;
+}
+
+void clear(bigint r)
+{
+	r->size = 0;
+	free(r->digits);
 }
 
 void add(bigint r, const bigint x, const bigint y)
@@ -321,56 +347,10 @@ int cmp(const bigint x, const bigint y)
 	return 0;
 }
 
-//void redc1(bigint r, const bigint x)
-//{
-//	int64 m, carry[2];
-//	bigint t;
-//	t->digits = (int64*)calloc((2*p->size) * BYTES, BYTES);
-//	for (int i = 0; i < r->size; i++)
-//		t->digits[i] = r->digits[i];
-//	for (int i = 0; i < p->size; i++)
-//	{
-//		int b = 0, c = 0;
-//		int j = 0;
-//		int64* x;
-//		carry[0] = 0, carry[1] = 0;
-//		m = t->digits[i] * p_inv_mod_b;
-//		for (j = 0; j < p->size; j++)
-//		{
-//			x = mul_int64(m, p->digits[j]);
-//			x[0] += t->digits[i + j];
-//			b = x[0] < t->digits[i + j];
-//			x[1] += b;
-//			c = x[1] < b;
-//			x[0] += carry[0];
-//			b = x[0] < carry[0];
-//			x[1] += carry[1] + b;
-//			c += b ? x[1] <= carry[1] : x[1] < carry[1];
-//			t->digits[i + j] = x[0];
-//			carry[0] = x[1];
-//			carry[1] = c;
-//		}
-//		for (; j < p->size + p->size; j++)
-//		{
-//			t->digits[i + j] += carry[0];
-//			carry[0] = carry[1] + (t->digits[i + j] < carry[0]);
-//			carry[1] = carry[0] < carry[1];
-//		}
-//	}
-//	t->digits += p->size;
-//	t->size = p->size;
-//	if (cmp(t, p) >= 0)
-//		sub_p(t);
-//	r->digits = t->digits;
-//	int i = p->size;
-//	for (; !r->digits[i-1]; i--);
-//	r->size = i;
-//}
-
 void redc1(bigint r, const bigint x)
 {
 	int16 i, j, k;
-	int64 m, * prod, carry[2];
+	int64 m, prod[2], carry[2];
 	int64 h = 0, * s = r->digits, * a = (int64*)malloc(BYTES * x->size);
 	for (i = 0; i < x->size; a[i] = x->digits[i++]);
 	for (i = 0; i < p->size; s[i++] = 0);
@@ -417,7 +397,7 @@ void redc1(bigint r, const bigint x)
 void redc2(bigint r, const bigint x, const bigint y)
 {
 	int16 i, j, k;
-	int64 m, * prod, carry[2];
+	int64 m, prod[2], carry[2];
 	int64 h = 0, * s = r->digits, * a = (int64*)malloc(BYTES * x->size), * b = (int64*)malloc(BYTES * y->size);
 	for (i = 0; i < x->size; a[i] = x->digits[i++]);
 	for (i = 0; i < y->size; b[i] = y->digits[i++]);
@@ -515,9 +495,9 @@ void power(bigint r, const bigint b, const bigint e, int16 d)
 	free(bits);
 }
 
-int64* mul_int(int64 x, int64 y)
+void mul_int(int64* r, int64 x, int64 y)
 {
-	int64 r[2], x0, x1, y0, y1, r0, r1;
+	int64 x0, x1, y0, y1, r0, r1;
 	x0 = x & 4294967295;
 	x1 = x >> 32;
 	y0 = y & 4294967295;
@@ -527,7 +507,23 @@ int64* mul_int(int64 x, int64 y)
 	r1 = x0 + x1 * y0;
 	r[0] = r0 + (r1 << 32);
 	r[1] = x1 * y1 + ((int64)(r1 < x0) << 32) + (r1 >> 32) + (r[0] < r0);
-	return r;
+}
+
+void euclid(int64* r, int64 x, int64 y)
+{
+	if (y)
+	{
+		euclid(r, y, x % y);
+		int64 t = r[0] - x / y * r[1];
+		r[0] = r[1];
+		r[1] = t;
+	}
+	else
+	{
+		r[0] = 1;
+		r[1] = 0;
+		r[2] = x;
+	}
 }
 
 void sw(bigint r, const bigint b, const bigint e, int16 d)
