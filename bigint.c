@@ -14,6 +14,7 @@ k = s[0] < prod[0];\
 carry[0] = prod[1] + k;\
 carry[1] = k ? carry[0] <= prod[1] : carry[0] < prod[1]
 
+static const char hex[16] = "0123456789abcdef";
 static const int bigint_size = sizeof(bigint_struct);
 static int64 p_inv_mod_b;
 static bigint r_square;
@@ -115,14 +116,16 @@ int set_str(bigint r, const char* str)
 char* get_str(const bigint x)
 {
 	int i = x->size - 1, j = BITS, k = 1;
+	int64 t = x->digits[i];
+	if (!t)
+		return "0";
 	char* r = (char*)calloc((x->size << BITS_OF_HEX_PER_UNIT) + 1, 1);
-	char hex[16] = "0123456789abcdef";
-	while ((r[0] = hex[x->digits[i] >> (j -= 4) & 15]) == '0');
-	for (j -= 4; j >= 0; j -= 4)
-		r[k++] = hex[x->digits[i] >> j & 15];
-	for (i--; i >= 0; i--)
+	while ((r[0] = hex[t >> (j -= 4) & 15]) == '0');
+	for (j -= 4, t = x->digits[i]; j >= 0; j -= 4)
+		r[k++] = hex[t >> j & 15];
+	for (i--, t = x->digits[i]; i >= 0; i--)
 		for (j = BITS_SUB_4; j >= 0; j -= 4)
-			r[k++] = hex[x->digits[i] >> j & 15];
+			r[k++] = hex[t >> j & 15];
 	return r;
 }
 
@@ -540,7 +543,7 @@ int16 bin(char* bits, bigint x)
 	return i + BITS * (x->size - 1) + 1;
 }
 
-static void sw(bigint r, const bigint b, const bigint e, int16 d)
+void sw(bigint r, const bigint b, const bigint e, int16 d)
 {
 	int i, j, k, l, m;
 	char* bits = (char*)malloc(BITS * e->size);
@@ -582,7 +585,7 @@ static void sw(bigint r, const bigint b, const bigint e, int16 d)
 	free(bits);
 }
 
-static void power_b(bigint r, const bigint y, const bigint x)
+void power_b(bigint r, const bigint y, const bigint x)
 {
 	int i, j, k;
 	int64 t;

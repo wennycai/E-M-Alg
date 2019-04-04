@@ -19,6 +19,19 @@ void test()
 	printf("Time: %llu\n", t1 - t0);
 }
 
+int main()
+{
+	init_p("65f19c04cfba45a0e39a8719b");
+	bigint x, y, t;
+	//init_str(x, "42e4a6b04baf73c444601480a");
+	//init_str(y, "51b7d2c57e55742ecab880a89");
+	//power(x, x, y);
+	init(x);
+	set_int(x, 0);
+	printf("%s\n", get_str(x));//, get_str(y), get_str(t));
+	return 0;
+}
+
 void rand_str(char * hex, int l)
 {
 	int j, k;
@@ -82,17 +95,3 @@ void rand_str(char * hex, int l)
 //		}
 //	free(hex);
 //}
-
-int main()
-{
-	init_p("65f19c04cfba45a0e39a8719c");
-	bigint x, y, t;
-	init_str(x, "42e4a6b04baf73c444601480a");
-	init_str(y, "51b7d2c57e55742ecab880a89");
-	char b[128];
-	int16 c = bin(b, x);
-	printf("%d\n", c);
-	for (int i = 0; i < c; i++)
-		printf("%d", b[i]);
-	return 0;
-}
