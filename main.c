@@ -13,7 +13,7 @@ void test()
 	init(t);
 	int64 t0, t1;
 	t0 = rdtsc();
-	power(t, x, y, 2);
+	power(t, x, y);
 	t1 = rdtsc();
 	printf("%s\n", get_str(t));
 	printf("Time: %llu\n", t1 - t0);
@@ -89,8 +89,10 @@ int main()
 	bigint x, y, t;
 	init_str(x, "42e4a6b04baf73c444601480a");
 	init_str(y, "51b7d2c57e55742ecab880a89");
-	power(t, x, y, 5);
-	printf("%s\n", get_str(t));
-	test();
+	char b[128];
+	int16 c = bin(b, x);
+	printf("%d\n", c);
+	for (int i = 0; i < c; i++)
+		printf("%d", b[i]);
 	return 0;
 }

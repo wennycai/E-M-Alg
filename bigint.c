@@ -450,8 +450,9 @@ void redc2(bigint r, const bigint x, const bigint y)
 	free(b);
 }
 
-void power(bigint r, const bigint b, const bigint e, int16 d)
+void power(bigint r, const bigint b, const bigint e)
 {
+	int d = 5;
 	int i, j, k, l, m;
 	char* bits = (char*)malloc(BITS * e->size);
 	int64 t;
@@ -526,7 +527,20 @@ void euclid(int64* r, int64 x, int64 y)
 	}
 }
 
-void sw(bigint r, const bigint b, const bigint e, int16 d)
+int16 bin(char* bits, bigint x)
+{
+	int16 i, j, k;
+	int64 t;
+	for (i = 0, k = 0; i < x->size - 1; i++)
+		for (j = 0, t = x->digits[i]; j < BITS; j++)
+			bits[k++] = t >> j & 1;
+	for (j = 0, t = x->digits[i]; j < BITS; j++)
+		if (bits[k++] = t >> j & 1)
+			i = j;
+	return i + BITS * (x->size - 1) + 1;
+}
+
+static void sw(bigint r, const bigint b, const bigint e, int16 d)
 {
 	int i, j, k, l, m;
 	char* bits = (char*)malloc(BITS * e->size);
@@ -568,7 +582,7 @@ void sw(bigint r, const bigint b, const bigint e, int16 d)
 	free(bits);
 }
 
-void power_b(bigint r, const bigint y, const bigint x)
+static void power_b(bigint r, const bigint y, const bigint x)
 {
 	int i, j, k;
 	int64 t;
