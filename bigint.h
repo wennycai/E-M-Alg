@@ -48,8 +48,6 @@ void square(bigint, const bigint);
 void power(bigint, const bigint, const bigint);
 void power_int(bigint, const bigint, int64);
 int cmp(const bigint, const bigint);
-
 void mul_int(int64*, int64, int64);
 void euclid(int64*, int64, int64);
-
-
+//int16 bin(char*, bigint);

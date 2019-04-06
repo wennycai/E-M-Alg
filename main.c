@@ -1,34 +1,32 @@
 #include <stdio.h>
 #include "bigint.h"
-#include "rdtsc.h"
+//#include "rdtsc.h"
 #include <time.h>
 #include <stdlib.h>
 
-void test()
-{
-	init_p("aaa000abcde432431bbbcccdddeeefff");
-	bigint x, y, t;
-	init_str(x, "aaa000abcde432431bbbcccddd");
-	init_str(y, "12a2313179779878000");
-	init(t);
-	int64 t0, t1;
-	t0 = rdtsc();
-	power(t, x, y);
-	t1 = rdtsc();
-	printf("%s\n", get_str(t));
-	printf("Time: %llu\n", t1 - t0);
-}
+//void test()
+//{
+//	init_p("aaa000abcde432431bbbcccdddeeefff");
+//	bigint x, y, t;
+//	init_str(x, "aaa000abcde432431bbbcccddd");
+//	init_str(y, "12a2313179779878000");
+//	init(t);
+//	int64 t0, t1;
+//	t0 = rdtsc();
+//	power(t, x, y);
+//	t1 = rdtsc();
+//	printf("%s\n", get_str(t));
+//	printf("Time: %llu\n", t1 - t0);
+//}
 
 int main()
 {
-	init_p("65f19c04cfba45a0e39a8719b");
+	init_p("cf64d76b4d94dc2b");
 	bigint x, y, t;
-	//init_str(x, "42e4a6b04baf73c444601480a");
-	//init_str(y, "51b7d2c57e55742ecab880a89");
-	//power(x, x, y);
-	init(x);
-	set_int(x, 0);
-	printf("%s\n", get_str(x));//, get_str(y), get_str(t));
+	init_str(x, "3f0dc1184192264f");
+	init_str(y, "ce556f4f5a2a7e08");
+	power(x, x, y);
+	printf("%s\n", get_str(x));
 	return 0;
 }
 

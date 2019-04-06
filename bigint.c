@@ -48,9 +48,17 @@ int init_p(const char* str)
 	euclid(r, s, t);
 	p_inv_mod_b = (-t) / s * r[1] - r[0];
 	r_square->digits = (int64*)calloc(BYTES * i, BYTES);
-	r_square->digits[1] = 1;
-	r_square->size = 2;
-	power_int(r_square, r_square, 2 * p->size);
+	if (i == 1)
+	{
+		r_square->digits[0] = ((-1 % p->digits[0]) + (r_square->size = 1)) % p->digits[0];
+		square(r_square, r_square);
+	}
+	else
+	{
+		r_square->digits[1] = 1;
+		r_square->size = 2;
+		power_int(r_square, r_square, 2 * p->size);
+	}
 	return i;
 }
 
@@ -70,7 +78,7 @@ int init_str(bigint r, const char* str)
 				r->digits[i] += (int64)(*str - 'a' + 10) << (j++ << 2);
 			else
 				return 0;
-	return (r->size = i);
+	return r->size = i;
 }
 
 void init_copy(bigint r, const bigint x)
@@ -446,7 +454,7 @@ void redc2(bigint r, const bigint x, const bigint y)
 		s[j] = h + carry[0];
 		h += carry[1] + (s[j] < carry[0]);
 	}
-	for (r->size = p->size; !s[r->size - 1]; r->size--);
+	for (r->size = p->size; !s[r->size - 1] && r->size > 1; r->size--);
 	if (h || cmp(r, p) >= 0)
 		sub_p(r);
 	free(a);
@@ -455,6 +463,8 @@ void redc2(bigint r, const bigint x, const bigint y)
 
 void power(bigint r, const bigint b, const bigint e)
 {
+	if (e->size == 1 && e->digits[0] == 0)
+		return set_int(r, 1);
 	int d = 5;
 	int i, j, k, l, m;
 	char* bits = (char*)malloc(BITS * e->size);
@@ -464,6 +474,7 @@ void power(bigint r, const bigint b, const bigint e)
 	b_square->digits = (int64*)malloc(BYTES * p->size);
 	b_power->digits = (int64*)malloc(BYTES * p->size);
 	redc2(b_power, b, r_square);
+	printf("%llu,%s\n", b->digits[0], get_str(r_square));
 	redc2(b_square, b_power, b_power);
 	for (i = 1; i < 1 << d - 1; i++)
 	{
