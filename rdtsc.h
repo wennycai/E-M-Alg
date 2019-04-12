@@ -14,8 +14,8 @@ unsigned long long rdtsc()
 
 #endif
 
-struct timeval
+typedef struct
 {
 	long tv_sec;
 	long tv_usec;
-};
+} timeval;

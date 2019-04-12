@@ -1,22 +1,28 @@
+#include <stdarg.h>
 #include<stdlib.h>
 #include<stdio.h>
 #include "bigint.h"
 
-#define ADD_MUL(x, y, s) mul_int(prod, x, y);\
-s += prod[0];	\
-k = s < prod[0];\
-carry[0] += prod[1] + k;\
-carry[1] += k ? carry[0] <= prod[1] : carry[0] < prod[1]
+#define ADD_MUL(s, x, y) \
+do { \
+mul_int(prod, x, y); \
+s += prod[0]; \
+k = s < prod[0]; \
+carry[0] += prod[1] + k; \
+carry[1] += k ? carry[0] <= prod[1] : carry[0] < prod[1]; \
+} while (0)
 
-#define ADD_MUL_0(x, y) mul_int(prod, x, y);\
+#define ADD_MUL_0(x, y) \
+do { \
+mul_int(prod, x, y); \
 s[0] += prod[0];	\
-k = s[0] < prod[0];\
-carry[0] = prod[1] + k;\
-carry[1] = k ? carry[0] <= prod[1] : carry[0] < prod[1]
+k = s[0] < prod[0]; \
+carry[0] = prod[1] + k; \
+carry[1] = k ? carry[0] <= prod[1] : carry[0] < prod[1]; \
+} while(0)
 
-static const char hex[16] = "0123456789abcdef";
 static const int bigint_size = sizeof(bigint_struct);
-static int64 p_inv_mod_b;
+static int64 neg_p_inv_mod_b;
 static bigint r_square;
 
 void init(bigint r)
@@ -46,7 +52,7 @@ int init_p(const char* str)
 	int64 t = (-1 % s + 1) % s;
 	int64 r[3];
 	euclid(r, s, t);
-	p_inv_mod_b = (-t) / s * r[1] - r[0];
+	neg_p_inv_mod_b = (-t) / s * r[1] - r[0];
 	r_square->digits = (int64*)calloc(BYTES * i, BYTES);
 	if (i == 1)
 	{
@@ -121,20 +127,25 @@ int set_str(bigint r, const char* str)
 	return (r->size = i);
 }
 
-char* get_str(const bigint x)
+void get_str(char* r, const bigint x)
 {
+	static const char hex[16] = "0123456789abcdef";
 	int i = x->size - 1, j = BITS, k = 1;
-	int64 t = x->digits[i];
-	if (!t)
-		return "0";
-	char* r = (char*)calloc((x->size << BITS_OF_HEX_PER_UNIT) + 1, 1);
-	while ((r[0] = hex[t >> (j -= 4) & 15]) == '0');
-	for (j -= 4, t = x->digits[i]; j >= 0; j -= 4)
-		r[k++] = hex[t >> j & 15];
-	for (i--, t = x->digits[i]; i >= 0; i--)
-		for (j = BITS_SUB_4; j >= 0; j -= 4)
-			r[k++] = hex[t >> j & 15];
-	return r;
+	while (j >= 0 && (r[0] = hex[x->digits[i] >> (j -= 4) & 15]) == '0');
+	for (j -= 4; j >= 0; j -= 4)
+		r[k++] = hex[x->digits[i] >> j & 15];
+	for (i--; i >= 0; i--)
+		for (j = BITS - 4; j >= 0; j -= 4)
+			r[k++] = hex[x->digits[i] >> j & 15];
+	r[k] = 0;
+}
+
+void print(const bigint x)
+{
+	char* str = (char*)malloc((x->size << BITS_OF_HEX_PER_UNIT) + 1);
+	get_str(str, x);
+	printf("%s\n", str);
+	free(str);
 }
 
 void clear(bigint r)
@@ -182,29 +193,30 @@ void sub(bigint r, const bigint x, const bigint y)
 		sub_n(r, x, y);
 	else
 	{
-		sub_n(r, p, y);
-		add(r, r, x);
+		sub_n(y, p, y);
+		add(r, x, y);
 	}
 }
 
 void sub_n(bigint r, const bigint x, const bigint y)
 {
-	int16 borrow = 0, i = 0;
+	int16 borrow = 0, i = 0, size = 1;
 	int64 t;
 	while (i < y->size)
 	{
 		t = x->digits[i] - y->digits[i] - borrow;
 		borrow = borrow ? x->digits[i] <= t : x->digits[i] < t;
 		if (r->digits[i++] = t)
-			r->size = i;
+			size = i;
 	}
 	while (i < x->size)
 	{
 		t = x->digits[i] - borrow;
 		borrow = borrow > x->digits[i];
 		if (r->digits[i++] = t)
-			r->size = i;
+			size = i;
 	}
+	r->size = size;
 }
 
 void sub_p(bigint r)
@@ -367,7 +379,7 @@ void redc1(bigint r, const bigint x)
 	for (i = 0; i < p->size; s[i++] = 0);
 	for (i = 0; i < x->size; i++)
 	{
-		m = (a[i] + s[0]) * p_inv_mod_b;
+		m = (a[i] + s[0]) * neg_p_inv_mod_b;
 		ADD_MUL_0(m, p->digits[0]);
 		s[0] += a[i];
 		k = s[0] < a[i];
@@ -379,14 +391,14 @@ void redc1(bigint r, const bigint x)
 			k = s[j] < carry[0];
 			carry[0] = carry[1] + k;
 			carry[1] = carry[0] < k;
-			ADD_MUL(m, p->digits[j + 1], s[j]);
+			ADD_MUL(s[j], m, p->digits[j + 1]);
 		}
 		s[j] = h + carry[0];
-		h += carry[1] + (s[j] < carry[0]);
+		h = carry[1] + (s[j] < carry[0]);
 	}
 	for (; i < p->size; i++)
 	{
-		m = s[0] * p_inv_mod_b;
+		m = s[0] * neg_p_inv_mod_b;
 		ADD_MUL_0(m, p->digits[0]);
 		for (j = 0; j < p->size - 1; j++)
 		{
@@ -394,38 +406,140 @@ void redc1(bigint r, const bigint x)
 			k = s[j] < carry[0];
 			carry[0] = carry[1] + k;
 			carry[1] = carry[0] < k;
-			ADD_MUL(m, p->digits[j + 1], s[j]);
+			ADD_MUL(s[j], m, p->digits[j + 1]);
 		}
 		s[j] = h + carry[0];
 		h = carry[1] + (s[j] < carry[0]);
 	}
-	for (r->size = p->size; !s[r->size - 1]; r->size--);
+	for (r->size = p->size; !s[r->size - 1] && r->size > 1; r->size--);
 	if (h || cmp(r, p) >= 0)
 		sub_p(r);
 	free(a);
 }
+
+//#define __GMP_CAST(type, expr)  ((type) (expr))
+//#define GMP_NUMB_MASK     (~ __GMP_CAST (int64, 0))
+//#define umul2low(ph, pl, uh, ul, vh, vl) \
+//  do {									\
+//    mp_limb_t _ph, _pl;							\
+//	int64 r[2]; \
+//	mul(r,ul,vl); \
+//    _pl=r[0],_ph=r[1];					\
+//    (ph) = _ph + (ul) * (vh) + (uh) * (vl);				\
+//    (pl) = _pl;								\
+//  } while (0)
+//
+//typedef unsigned long long mp_limb_t;
+//typedef int mp_size_t;
+//
+//typedef mp_limb_t* mp_ptr;
+//typedef const mp_limb_t* mp_srcptr;
+//
+//int64 mpn_add_n(int64* rp, const int64* up, const int64* vp, int16 n)
+//{
+//	int64 ul, vl, sl, rl, cy, cy1, cy2;
+//	cy = 0;
+//	do
+//	{
+//		ul = *up++;
+//		vl = *vp++;
+//		sl = ul + vl;
+//		cy1 = sl < ul;
+//		rl = sl + cy;
+//		cy2 = rl < sl;
+//		cy = cy1 | cy2;
+//		*rp++ = rl;
+//	} while (--n != 0);
+//	return cy;
+//}
+//
+//int64 mpn_addmul_1(int64* rp, const int64* up, int16 n, int64 vl)
+//{
+//	int64 ul, cl, hpl, lpl, rl;
+//	int64 r[2];
+//	cl = 0;
+//	do
+//	{
+//		ul = *up++;
+//		mul_int(r, ul, vl);
+//		hpl = r[1];
+//		lpl = r[0];
+//		lpl += cl;
+//		cl = (lpl < cl) + hpl;
+//
+//		rl = *rp;
+//		lpl = rl + lpl;
+//		cl += lpl < rl;
+//		*rp++ = lpl;
+//	} while (--n != 1);
+//	return cl;
+//}
+//
+//int64 mpn_redc_1(int64* rp, int64* up, const int64* mp)
+//{
+//	int j;
+//	int64 cy;
+//	const int16 n = p->size;
+//	for (j = n - 1; j >= 0; j--)
+//	{
+//		cy = mpn_addmul_1(up, mp, n, (up[0] * neg_p_inv_mod_b));
+//		up[0] = cy;
+//		up++;
+//	}
+//	rp = up;
+//	//cy = mpn_add_n(rp, up, up - n, n);
+//	return cy;
+//}
+//
+//void redc_1(bigint r, const bigint x, const bigint y)
+//{
+//	int i, j, k;
+//	int64 m, prod[2], carry[2];
+//	int64* xp = (int64*)calloc(2 * BYTES * p->size, BYTES);
+//	for (i = 0; i < x->size; i++)
+//		xp[i] = x->digits[i];
+//	for (i = 0; i < 2*p->size; i++)
+//	{
+//		carry[0] = 0, carry[1] = 0;
+//		m = xp[i] * neg_p_inv_mod_b;
+//		for (j = 0; j < p->size; j++)
+//		{
+//			xp[i + j] += +carry[0];
+//			k = xp[i + j] < carry[0];
+//			carry[0] = carry[1] + k;
+//			carry[1] = carry[0] < k;
+//			ADD_MUL(xp[i + j], m, p->digits[j]);
+//		}
+//	}
+//	xp += p->size;
+//	r->digits = xp;
+//	r->size = p->size;
+//	if (cmp(r, p) >= 0)
+//		sub_p(r);
+//}
 
 void redc2(bigint r, const bigint x, const bigint y)
 {
 	int16 i, j, k;
 	int64 m, prod[2], carry[2];
 	int64 h = 0, * s = r->digits, * a = (int64*)malloc(BYTES * x->size), * b = (int64*)malloc(BYTES * y->size);
+	//int64 h = 0, * s = (int64*)calloc(BYTES * p->size, BYTES), * a = x->digits, * b = y->digits;
 	for (i = 0; i < x->size; a[i] = x->digits[i++]);
 	for (i = 0; i < y->size; b[i] = y->digits[i++]);
 	for (i = 0; i < p->size; s[i++] = 0);
 	for (i = 0; i < x->size; i++)
 	{
-		m = (a[i] * b[0] + s[0]) * p_inv_mod_b;
+		m = (a[i] * b[0] + s[0]) * neg_p_inv_mod_b;
 		ADD_MUL_0(m, p->digits[0]);
-		ADD_MUL(a[i], b[0], s[0]);
+		ADD_MUL(s[0], a[i], b[0]);
 		for (j = 0; j < y->size - 1; j++)
 		{
 			s[j] = s[j + 1] + carry[0];
 			k = s[j] < carry[0];
 			carry[0] = carry[1] + k;
 			carry[1] = carry[0] < k;
-			ADD_MUL(m, p->digits[j + 1], s[j]);
-			ADD_MUL(a[i], b[j + 1], s[j]);
+			ADD_MUL(s[j], m, p->digits[j + 1]);
+			ADD_MUL(s[j], a[i], b[j + 1]);
 		}
 		for (; j < p->size - 1; j++)
 		{
@@ -433,14 +547,14 @@ void redc2(bigint r, const bigint x, const bigint y)
 			k = s[j] < carry[0];
 			carry[0] = carry[1] + k;
 			carry[1] = carry[0] < k;
-			ADD_MUL(m, p->digits[j + 1], s[j]);
+			ADD_MUL(s[j], m, p->digits[j + 1]);
 		}
 		s[j] = h + carry[0];
 		h = carry[1] + (s[j] < carry[0]);
 	}
 	for (; i < p->size; i++)
 	{
-		m = s[0] * p_inv_mod_b;
+		m = s[0] * neg_p_inv_mod_b;
 		carry[0] = 0, carry[1] = 0;
 		ADD_MUL_0(m, p->digits[0]);
 		for (j = 0; j < p->size - 1; j++)
@@ -449,61 +563,63 @@ void redc2(bigint r, const bigint x, const bigint y)
 			k = s[j] < carry[0];
 			carry[0] = carry[1] + k;
 			carry[1] = carry[0] < k;
-			ADD_MUL(m, p->digits[j + 1], s[j]);
+			ADD_MUL(s[j], m, p->digits[j + 1]);
 		}
 		s[j] = h + carry[0];
-		h += carry[1] + (s[j] < carry[0]);
+		h = carry[1] + (s[j] < carry[0]);
 	}
 	for (r->size = p->size; !s[r->size - 1] && r->size > 1; r->size--);
+	//for (i = 0; i < r->size; r->digits[i] = s[i++]);
 	if (h || cmp(r, p) >= 0)
 		sub_p(r);
 	free(a);
 	free(b);
+	//free(s);
 }
 
 void power(bigint r, const bigint b, const bigint e)
 {
+	static int16 thresholds[] = { 0,6,24,80,240,672,1792,4608 };
 	if (e->size == 1 && e->digits[0] == 0)
 		return set_int(r, 1);
-	int d = 5;
-	int i, j, k, l, m;
+	int i, j, k, l, m, win_size;
 	char* bits = (char*)malloc(BITS * e->size);
 	int64 t;
 	bigint b_square;
-	bigint_ptr b_power = (bigint_ptr)malloc(bigint_size * (1 << d - 1));
-	b_square->digits = (int64*)malloc(BYTES * p->size);
-	b_power->digits = (int64*)malloc(BYTES * p->size);
-	redc2(b_power, b, r_square);
-	printf("%llu,%s\n", b->digits[0], get_str(r_square));
-	redc2(b_square, b_power, b_power);
-	for (i = 1; i < 1 << d - 1; i++)
-	{
-		(b_power + i)->digits = (int64*)malloc(BYTES * p->size);
-		redc2(b_power + i, b_power + i - 1, b_square);
-	}
 	for (i = 0, k = 0; i < e->size - 1; i++)
 		for (j = 0, t = e->digits[i]; j < BITS; j++)
 			bits[k++] = t >> j & 1;
 	for (j = 0, t = e->digits[i]; j < BITS; j++)
 		if (bits[k++] = t >> j & 1)
 			i = j;
-	copy(r, b_power);
-	for (i += BITS * (e->size - 1) - 1; i >= 0; i--)
+	i += BITS * (e->size - 1) - 1;
+	for (win_size = 1; thresholds[win_size] < i; win_size++);
+	bigint_ptr b_power = (bigint_ptr)malloc(bigint_size * (1 << win_size - 1));
+	b_square->digits = (int64*)malloc(BYTES * p->size);
+	b_power->digits = (int64*)malloc(BYTES * p->size);
+	redc2(b_power, b, r_square);
+	redc2(b_square, b_power, b_power);
+	for (j = 1; j < 1 << win_size - 1; j++)
+	{
+		(b_power + j)->digits = (int64*)malloc(BYTES * p->size);
+		redc2(b_power + j, b_power + j - 1, b_square);
+	}
+	for (copy(r, b_power); i >= 0; i--)
 		if (bits[i])
 		{
-			l = i - d >= -1 ? d - 1 : i;
+			l = i - win_size >= -1 ? win_size - 1 : i;
 			for (j = l; !bits[i - j]; j--);
 			for (k = 0, m = 0; k < j; redc2(r, r, r))
 				m += bits[i - k] << j - (++k);
 			redc2(r, r, r);
 			for (redc2(r, r, b_power + m); k < l; k++)
 				redc2(r, r, r);
-			i -= d - 1;
+			i -= win_size - 1;
 		}
 		else
 			redc2(r, r, r);
 	redc1(r, r);
-	for (i = 0; i < 1 << d - 1; i++)
+	for (i = 0; i < 1 << win_size - 1; i++)
 		free((b_power + i)->digits);
 	free(b_square->digits);
 	free(b_power);
@@ -532,13 +648,9 @@ void euclid(int64* r, int64 x, int64 y)
 		int64 t = r[0] - x / y * r[1];
 		r[0] = r[1];
 		r[1] = t;
+		return;
 	}
-	else
-	{
-		r[0] = 1;
-		r[1] = 0;
-		r[2] = x;
-	}
+	r[0] = 1, r[1] = 0, r[2] = x;
 }
 
 int16 bin(char* bits, bigint x)
