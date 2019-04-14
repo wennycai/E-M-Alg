@@ -1,39 +1,25 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include "bigint.h"
 #include "rdtsc.h"
-#include <time.h>
-#include <stdlib.h>
 
 void test()
 {
-	//init_p("aaa000abcde432431bbbcccdddeeefffaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaafff");
+	//init_p("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaafffaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaafff");
 	//bigint x, y, t;
-	//init_str(x, "aaa000abcde432431bbbcccdddaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
-	//init_str(y, "12a2313179779878000aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
-	init_p("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaafffaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+	//init_str(x, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+	//init_str(y, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+	init_p("7");
 	bigint x, y, t;
-	init_str(x, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
-	init_str(y, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
-	init(t);
+	init_m(x, y, t);
 	int64 t0, t1;
-	if (0)
-	{
-		int64* xx = (int64*)calloc(16 * p->size, 8);
-		for (int i = 0; i < x->size; i++)
-			xx[i] = x->digits[i];
-		t->size = p->size;
-		t0 = rdtsc();
-		mpn_redc_1(t->digits, xx, p->digits);
-		t1 = rdtsc();
-	}
-	else
-	{
-		t0 = rdtsc();
-		redc2(t, x, y);
-		t1 = rdtsc();
-		print(t);
-		printf("Time: %llu\n", t1 - t0);
-	}
+	set_int(x, 1);
+	set_int(y, 3);
+	t0 = rdtsc();
+	mul(t, x, y);
+	t1 = rdtsc();
+	print(t);
+	printf("Time: %llu\n", t1 - t0);
 }
 
 int main()
@@ -42,16 +28,13 @@ int main()
 	//bigint x, y, t;
 	//init_str(x, "ffffffffffffffffffffc0000000000000000000000000000000000000000001");
 	//init_str(y, "14");
+	//int64 t0, t1;
+	//t0 = rdtsc();
 	//power(x, x, y);
-	//printf("%s\n", get_str(x));
-	init_p("2e7");
-	bigint x, y, t;
-	init(t);
-	init_str(x, "1c2");
-	init_str(y, "20b");
-	sub(x, x, y);
-	print(x);
-	//test();
+	//t1 = rdtsc();
+	//print(t);
+	//printf("Time: %llu\n", t1 - t0);
+	test();
 	return 0;
 }
 

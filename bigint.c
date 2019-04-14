@@ -4,22 +4,18 @@
 #include "bigint.h"
 
 #define ADD_MUL(s, x, y) \
-do { \
 mul_int(prod, x, y); \
 s += prod[0]; \
 k = s < prod[0]; \
 carry[0] += prod[1] + k; \
-carry[1] += k ? carry[0] <= prod[1] : carry[0] < prod[1]; \
-} while (0)
+carry[1] += k ? carry[0] <= prod[1] : carry[0] < prod[1]
 
 #define ADD_MUL_0(x, y) \
-do { \
 mul_int(prod, x, y); \
 s[0] += prod[0];	\
 k = s[0] < prod[0]; \
 carry[0] = prod[1] + k; \
-carry[1] = k ? carry[0] <= prod[1] : carry[0] < prod[1]; \
-} while(0)
+carry[1] = k ? carry[0] <= prod[1] : carry[0] < prod[1]
 
 static const int bigint_size = sizeof(bigint_struct);
 static int64 neg_p_inv_mod_b;
@@ -29,6 +25,17 @@ void init(bigint r)
 {
 	r->size = 1;
 	r->digits = (int64*)malloc(BYTES * p->size);
+}
+
+void init_m(bigint x, ...)
+{
+	va_list va;
+	bigint_ptr a;
+	va_start(va, x);
+	init(x);
+	while ((a = va_arg(va, bigint_ptr)) != NULL)
+		init(a);
+	va_end(va);
 }
 
 int init_p(const char* str)
@@ -63,7 +70,7 @@ int init_p(const char* str)
 	{
 		r_square->digits[1] = 1;
 		r_square->size = 2;
-		power_int(r_square, r_square, 2 * p->size);
+		power_init(r_square, r_square, 2 * p->size);
 	}
 	return i;
 }
@@ -234,6 +241,12 @@ void sub_p(bigint r)
 
 void mul(bigint r, const bigint x, const bigint y)
 {
+	redc2(r, x, y);
+	redc2(r, r, r_square);
+}
+
+void mul_b(bigint r, const bigint x, const bigint y)
+{
 	int i, j, k;
 	int64 t;
 	int64* a = (int64*)malloc(BYTES * x->size);
@@ -356,6 +369,22 @@ void power_int(bigint r, const bigint b, int64 e)
 	free(a->digits);
 }
 
+void power_init(bigint r, const bigint b, int64 e)
+{
+	bigint a;
+	init_copy(a, b);
+	set_int(r, 1);
+	if (e & 1)
+		mul_b(r, r, a);
+	while (e >>= 1)
+	{
+		square(a, a);
+		if (e & 1)
+			mul_b(r, r, a);
+	}
+	free(a->digits);
+}
+
 int cmp(const bigint x, const bigint y)
 {
 	if (x->size > y->size)
@@ -416,107 +445,6 @@ void redc1(bigint r, const bigint x)
 		sub_p(r);
 	free(a);
 }
-
-//#define __GMP_CAST(type, expr)  ((type) (expr))
-//#define GMP_NUMB_MASK     (~ __GMP_CAST (int64, 0))
-//#define umul2low(ph, pl, uh, ul, vh, vl) \
-//  do {									\
-//    mp_limb_t _ph, _pl;							\
-//	int64 r[2]; \
-//	mul(r,ul,vl); \
-//    _pl=r[0],_ph=r[1];					\
-//    (ph) = _ph + (ul) * (vh) + (uh) * (vl);				\
-//    (pl) = _pl;								\
-//  } while (0)
-//
-//typedef unsigned long long mp_limb_t;
-//typedef int mp_size_t;
-//
-//typedef mp_limb_t* mp_ptr;
-//typedef const mp_limb_t* mp_srcptr;
-//
-//int64 mpn_add_n(int64* rp, const int64* up, const int64* vp, int16 n)
-//{
-//	int64 ul, vl, sl, rl, cy, cy1, cy2;
-//	cy = 0;
-//	do
-//	{
-//		ul = *up++;
-//		vl = *vp++;
-//		sl = ul + vl;
-//		cy1 = sl < ul;
-//		rl = sl + cy;
-//		cy2 = rl < sl;
-//		cy = cy1 | cy2;
-//		*rp++ = rl;
-//	} while (--n != 0);
-//	return cy;
-//}
-//
-//int64 mpn_addmul_1(int64* rp, const int64* up, int16 n, int64 vl)
-//{
-//	int64 ul, cl, hpl, lpl, rl;
-//	int64 r[2];
-//	cl = 0;
-//	do
-//	{
-//		ul = *up++;
-//		mul_int(r, ul, vl);
-//		hpl = r[1];
-//		lpl = r[0];
-//		lpl += cl;
-//		cl = (lpl < cl) + hpl;
-//
-//		rl = *rp;
-//		lpl = rl + lpl;
-//		cl += lpl < rl;
-//		*rp++ = lpl;
-//	} while (--n != 1);
-//	return cl;
-//}
-//
-//int64 mpn_redc_1(int64* rp, int64* up, const int64* mp)
-//{
-//	int j;
-//	int64 cy;
-//	const int16 n = p->size;
-//	for (j = n - 1; j >= 0; j--)
-//	{
-//		cy = mpn_addmul_1(up, mp, n, (up[0] * neg_p_inv_mod_b));
-//		up[0] = cy;
-//		up++;
-//	}
-//	rp = up;
-//	//cy = mpn_add_n(rp, up, up - n, n);
-//	return cy;
-//}
-//
-//void redc_1(bigint r, const bigint x, const bigint y)
-//{
-//	int i, j, k;
-//	int64 m, prod[2], carry[2];
-//	int64* xp = (int64*)calloc(2 * BYTES * p->size, BYTES);
-//	for (i = 0; i < x->size; i++)
-//		xp[i] = x->digits[i];
-//	for (i = 0; i < 2*p->size; i++)
-//	{
-//		carry[0] = 0, carry[1] = 0;
-//		m = xp[i] * neg_p_inv_mod_b;
-//		for (j = 0; j < p->size; j++)
-//		{
-//			xp[i + j] += +carry[0];
-//			k = xp[i + j] < carry[0];
-//			carry[0] = carry[1] + k;
-//			carry[1] = carry[0] < k;
-//			ADD_MUL(xp[i + j], m, p->digits[j]);
-//		}
-//	}
-//	xp += p->size;
-//	r->digits = xp;
-//	r->size = p->size;
-//	if (cmp(r, p) >= 0)
-//		sub_p(r);
-//}
 
 void redc2(bigint r, const bigint x, const bigint y)
 {
@@ -579,9 +507,9 @@ void redc2(bigint r, const bigint x, const bigint y)
 
 void power(bigint r, const bigint b, const bigint e)
 {
-	static int16 thresholds[] = { 0,6,24,80,240,672,1792,4608 };
 	if (e->size == 1 && e->digits[0] == 0)
 		return set_int(r, 1);
+	static int16 thresholds[] = { 0,6,24,80,240,672,1792,4608 };
 	int i, j, k, l, m, win_size;
 	char* bits = (char*)malloc(BITS * e->size);
 	int64 t;
@@ -625,6 +553,54 @@ void power(bigint r, const bigint b, const bigint e)
 	free(b_power);
 	free(bits);
 }
+
+void power_(bigint r, const bigint b, const bigint e, int16 d)
+{
+	if (e->size == 1 && e->digits[0] == 0)
+		return set_int(r, 1);
+	int i, j, k, l, m;
+	char* bits = (char*)malloc(BITS * e->size);
+	int64 t;
+	bigint b_square;
+	bigint_ptr b_power = (bigint_ptr)malloc(bigint_size * (1 << d - 1));
+	b_square->digits = (int64*)malloc(BYTES * p->size);
+	b_power->digits = (int64*)malloc(BYTES * p->size);
+	redc2(b_power, b, r_square);
+	redc2(b_square, b_power, b_power);
+	for (i = 1; i < 1 << d - 1; i++)
+	{
+		(b_power + i)->digits = (int64*)malloc(BYTES * p->size);
+		redc2(b_power + i, b_power + i - 1, b_square);
+	}
+	for (i = 0, k = 0; i < e->size - 1; i++)
+		for (j = 0, t = e->digits[i]; j < BITS; j++)
+			bits[k++] = t >> j & 1;
+	for (j = 0, t = e->digits[i]; j < BITS; j++)
+		if (bits[k++] = t >> j & 1)
+			i = j;
+	copy(r, b_power);
+	for (i += BITS * (e->size - 1) - 1; i >= 0; i--)
+		if (bits[i])
+		{
+			l = i - d >= -1 ? d - 1 : i;
+			for (j = l; !bits[i - j]; j--);
+			for (k = 0, m = 0; k < j; redc2(r, r, r))
+				m += bits[i - k] << j - (++k);
+			redc2(r, r, r);
+			for (redc2(r, r, b_power + m); k < l; k++)
+				redc2(r, r, r);
+			i -= d - 1;
+		}
+		else
+			redc2(r, r, r);
+	redc1(r, r);
+	for (i = 0; i < 1 << d - 1; i++)
+		free((b_power + i)->digits);
+	free(b_square->digits);
+	free(b_power);
+	free(bits);
+}
+	
 
 void mul_int(int64* r, int64 x, int64 y)
 {

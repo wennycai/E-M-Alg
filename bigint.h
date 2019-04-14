@@ -25,29 +25,31 @@ typedef bigint_struct* bigint_ptr, bigint[1];
 typedef bigint* element;
 bigint p;
 
-/*Allocate memory for bigint struct's array of integers.*/
+/*Allocate memory for a bigint struct's array of integer.*/
 void init(bigint);
-/*Initial the prime p, as well as the base field, return the size.*/
+/*Initial multiple big integers.*/
+void init_m(bigint x, ...);
+/*Initial the prime p, as well as the base field, and return the size.*/
 int init_p(const char*);
-/*Allocate memory and assign values with a hex string, return the size.*/
+/*Allocate memory and assign values with a hex string, and return the size.*/
 int init_str(bigint, const char*);
-/*Allocate memory and assign values with another bigint.*/
+/*Allocate memory and assign values with another big integer.*/
 void init_copy(bigint, const bigint);
-/*Assign values with another bigint.*/
+/*Assign values with another big integer.*/
 void copy(bigint, const bigint);
-/*Assign values with an integers.*/
+/*Assign values with an 64-bit integers.*/
 void set_int(bigint, const int64);
 /*Assign values with a hex string, return the size.*/
 int set_str(bigint, const char*);
-/*Get the hex string of a bigint.*/
+/*Get the hex string of a big integer.*/
 void get_str(char*, const bigint);
-/*Print the hex string of a bigint.*/
+/*Print the hex string of a big integer.*/
 void print(const bigint);
-/*Free the allocated memory of a bigint, which will be unavailable until initialized again.*/
+/*Free the allocated memory of a big integer, which will be unavailable until initialized again.*/
 void clear(bigint);
 void add(bigint, const bigint, const bigint);
 void sub(bigint, const bigint, const bigint);
-/*Substract one bigint from another, when the former is greater than the latter*/
+/*Substract one big integer from another, when the former is greater than the latter.*/
 void sub_n(bigint, const bigint, const bigint);
 void mul(bigint, const bigint, const bigint);
 void twice(bigint, const bigint);
