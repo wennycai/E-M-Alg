@@ -16,21 +16,57 @@ void test()
 	set_int(x, 1);
 	set_int(y, 3);
 	t0 = rdtsc();
-	mul(t, x, y);
+	mul_b(x, x, y);
 	t1 = rdtsc();
-	print(t);
+	print(x);
 	printf("Time: %llu\n", t1 - t0);
 }
+
+void t0()
+{
+	int b[] = { 1, 2, 3 };
+	int a[3];
+	for (int i = 0; i < 3; *(a + i) = b[i++]);
+	printf("%d,%d,%d\n", a[0], a[1], a[2]);
+}
+
+void t1()
+{
+	int b[] = { 1, 2, 3 };
+	int a[3];
+	for (int i = 0; i < 3; a[i] = b[i++]);
+	printf("%d,%d,%d\n", a[0], a[1], a[2]);
+}
+
+void t2()
+{
+	int b[] = { 1, 2, 3 };
+	int c[3];
+	int* a = c;
+	for (int i = 0; i < 3; a[i] = b[i++]);
+	printf("%d,%d,%d\n", a[0], a[1], a[2]);
+}
+
+void t3()
+{
+	int b[] = { 1, 2, 3 };
+	int c[3];
+	int* a = c;
+	for (int i = 0; i < 3; *(a + i) = b[i++]);
+	printf("%d,%d,%d\n", a[0], a[1], a[2]);
+}
+
 
 int main()
 {
 	//init_p("3fffffffffffffffffffe00000000000000000000400000000000000000000007fffffffffffffffffffe00000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001");
 	//bigint x, y, t;
 	//init_str(x, "ffffffffffffffffffffc0000000000000000000000000000000000000000001");
-	//init_str(y, "14");
+	//init_str(y, "14fffffffffffffffffffeaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbb21111111111412479187591275914aaaaaaaaaaabcccccccccccccccccccccccddddddddddddddddddddddeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccdddddd");
+	//init(t);
 	//int64 t0, t1;
 	//t0 = rdtsc();
-	//power(x, x, y);
+	//mul(t, y, x);
 	//t1 = rdtsc();
 	//print(t);
 	//printf("Time: %llu\n", t1 - t0);

@@ -250,8 +250,10 @@ void mul_b(bigint r, const bigint x, const bigint y)
 	int i, j, k;
 	int64 t;
 	int64* a = (int64*)malloc(BYTES * x->size);
+	a[0] = 2;
 	bigint b;
-	for (i = 0, k = x->size - 1; i <= k; a[i] = x->digits[i++]);
+	for (i = 0, k = x->size - 1; i <= k; i++)
+		a[i] = x->digits[i];
 	init_copy(b, y);
 	set_int(r, 0);
 	for (i = 0; i < k; i++)
@@ -304,7 +306,8 @@ void square(bigint r, const bigint x)
 	int64 t;
 	int64* a = (int64*)malloc(BYTES * x->size);
 	bigint b;
-	for (i = 0, k = x->size - 1; i <= k; a[i] = x->digits[i++]);
+	for (i = 0, k = x->size - 1; i <= k; i++)
+		a[i] = x->digits[i];
 	init_copy(b, x);
 	set_int(r, 0);
 	for (i = 0; i < k; i++)
@@ -404,7 +407,8 @@ void redc1(bigint r, const bigint x)
 	int16 i, j, k;
 	int64 m, prod[2], carry[2];
 	int64 h = 0, * s = r->digits, * a = (int64*)malloc(BYTES * x->size);
-	for (i = 0; i < x->size; a[i] = x->digits[i++]);
+	for (i = 0; i < x->size; i++)
+		a[i] = x->digits[i];
 	for (i = 0; i < p->size; s[i++] = 0);
 	for (i = 0; i < x->size; i++)
 	{
@@ -452,8 +456,10 @@ void redc2(bigint r, const bigint x, const bigint y)
 	int64 m, prod[2], carry[2];
 	int64 h = 0, * s = r->digits, * a = (int64*)malloc(BYTES * x->size), * b = (int64*)malloc(BYTES * y->size);
 	//int64 h = 0, * s = (int64*)calloc(BYTES * p->size, BYTES), * a = x->digits, * b = y->digits;
-	for (i = 0; i < x->size; a[i] = x->digits[i++]);
-	for (i = 0; i < y->size; b[i] = y->digits[i++]);
+	for (i = 0; i < x->size; i++)
+		a[i] = x->digits[i];
+	for (i = 0; i < y->size; i++)
+		b[i] = y->digits[i];
 	for (i = 0; i < p->size; s[i++] = 0);
 	for (i = 0; i < x->size; i++)
 	{
@@ -554,54 +560,6 @@ void power(bigint r, const bigint b, const bigint e)
 	free(bits);
 }
 
-void power_(bigint r, const bigint b, const bigint e, int16 d)
-{
-	if (e->size == 1 && e->digits[0] == 0)
-		return set_int(r, 1);
-	int i, j, k, l, m;
-	char* bits = (char*)malloc(BITS * e->size);
-	int64 t;
-	bigint b_square;
-	bigint_ptr b_power = (bigint_ptr)malloc(bigint_size * (1 << d - 1));
-	b_square->digits = (int64*)malloc(BYTES * p->size);
-	b_power->digits = (int64*)malloc(BYTES * p->size);
-	redc2(b_power, b, r_square);
-	redc2(b_square, b_power, b_power);
-	for (i = 1; i < 1 << d - 1; i++)
-	{
-		(b_power + i)->digits = (int64*)malloc(BYTES * p->size);
-		redc2(b_power + i, b_power + i - 1, b_square);
-	}
-	for (i = 0, k = 0; i < e->size - 1; i++)
-		for (j = 0, t = e->digits[i]; j < BITS; j++)
-			bits[k++] = t >> j & 1;
-	for (j = 0, t = e->digits[i]; j < BITS; j++)
-		if (bits[k++] = t >> j & 1)
-			i = j;
-	copy(r, b_power);
-	for (i += BITS * (e->size - 1) - 1; i >= 0; i--)
-		if (bits[i])
-		{
-			l = i - d >= -1 ? d - 1 : i;
-			for (j = l; !bits[i - j]; j--);
-			for (k = 0, m = 0; k < j; redc2(r, r, r))
-				m += bits[i - k] << j - (++k);
-			redc2(r, r, r);
-			for (redc2(r, r, b_power + m); k < l; k++)
-				redc2(r, r, r);
-			i -= d - 1;
-		}
-		else
-			redc2(r, r, r);
-	redc1(r, r);
-	for (i = 0; i < 1 << d - 1; i++)
-		free((b_power + i)->digits);
-	free(b_square->digits);
-	free(b_power);
-	free(bits);
-}
-	
-
 void mul_int(int64* r, int64 x, int64 y)
 {
 	int64 x0, x1, y0, y1, r0, r1;
@@ -690,7 +648,8 @@ void power_b(bigint r, const bigint y, const bigint x)
 	int64 t;
 	int64* a = (int64*)malloc(BYTES * x->size);
 	bigint b;
-	for (i = 0, k = x->size - 1; i <= k; a[i] = x->digits[i++]);
+	for (i = 0, k = x->size - 1; i <= k; i++)
+		a[i] = x->digits[i];
 	b->digits = (int64*)malloc(BYTES * p->size);
 	redc2(b, y, r_square);
 	redc1(r, r_square);
