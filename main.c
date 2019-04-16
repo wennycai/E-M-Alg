@@ -5,20 +5,19 @@
 
 void test()
 {
-	//init_p("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaafffaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaafff");
-	//bigint x, y, t;
-	//init_str(x, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
-	//init_str(y, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
-	init_p("7");
+	init_p("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaafffaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaafffaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaafff");
 	bigint x, y, t;
-	init_m(x, y, t);
+	init_str(x, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaafffa");
+	init_str(y, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaafffaaaa");
+	init(t);
 	int64 t0, t1;
-	set_int(x, 1);
-	set_int(y, 3);
 	t0 = rdtsc();
-	mul_b(x, x, y);
+	sub(t, t, x);
+	sub(t, t, y);
 	t1 = rdtsc();
+	print(t);
 	print(x);
+	print(y);
 	printf("Time: %llu\n", t1 - t0);
 }
 
@@ -66,7 +65,7 @@ int main()
 	//init(t);
 	//int64 t0, t1;
 	//t0 = rdtsc();
-	//mul(t, y, x);
+	//power(t, y, x);
 	//t1 = rdtsc();
 	//print(t);
 	//printf("Time: %llu\n", t1 - t0);

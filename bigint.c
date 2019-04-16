@@ -200,8 +200,8 @@ void sub(bigint r, const bigint x, const bigint y)
 		sub_n(r, x, y);
 	else
 	{
-		sub_n(y, p, y);
-		add(r, x, y);
+		sub_n(r, y, x);
+		sub_n(r, p, r);
 	}
 }
 
